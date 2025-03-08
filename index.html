@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Танчики</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay">
+            <div id="score">Очки: <span id="score-value">0</span></div>
+            <div id="lives">Жизни: <span id="lives-value">3</span></div>
+            <div id="level">Уровень: <span id="level-value">1</span></div>
+            <div id="powerup">Бонус: <span id="powerup-value">-</span></div>
+            <div id="leaderboard">
+                <h3>Таблица лидеров</h3>
+                <div id="leaderboard-list"></div>
+            </div>
+            <div id="controls">
+                <button id="start-game">Начать игру</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html> 
