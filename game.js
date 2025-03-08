@@ -15,6 +15,8 @@ class Game {
         this.animationFrame = 0;
         this.debugMode = false; // Для отладки
         this.jumpPressed = false; // Для отслеживания нажатия прыжка
+        this.localPlayerState = null;
+        this.SPEED = 5;
         
         // Загрузка изображений
         this.images = {};
@@ -62,13 +64,16 @@ class Game {
         });
 
         this.socket.on('gameState', (state) => {
-            console.log('Получено состояние игры:', state);
             this.players = new Map(Object.entries(state.players));
             this.currentPlayer = state.currentPlayer;
             this.mushroom = state.mushroom;
             
             if (this.currentPlayer && state.players[this.currentPlayer]) {
                 this.playerState = state.players[this.currentPlayer];
+                // Обновляем локальное состояние только если нет движения
+                if (!this.isMoving()) {
+                    this.localPlayerState = {...this.playerState};
+                }
                 this.score = this.playerState.score;
                 this.lives = this.playerState.lives;
                 this.level = this.playerState.level;
@@ -147,6 +152,10 @@ class Game {
         });
     }
 
+    isMoving() {
+        return this.keys['a'] || this.keys['arrowleft'] || this.keys['d'] || this.keys['arrowright'];
+    }
+
     gameLoop(timestamp) {
         // Обновление анимации
         if (timestamp - this.lastTime > 100) {
@@ -160,14 +169,32 @@ class Game {
                 right: this.keys['d'] || this.keys['arrowright']
             };
             
-            // Всегда отправляем состояние движения
-            this.socket.emit('move', movement);
+            // Локальное обновление позиции для плавного движения
+            if (this.localPlayerState) {
+                if (movement.left) {
+                    this.localPlayerState.x -= this.SPEED;
+                    this.localPlayerState.facingLeft = true;
+                }
+                if (movement.right) {
+                    this.localPlayerState.x += this.SPEED;
+                    this.localPlayerState.facingLeft = false;
+                }
+                
+                // Ограничение движения по краям экрана
+                if (this.localPlayerState.x < 16) this.localPlayerState.x = 16;
+                if (this.localPlayerState.x > this.canvas.width - 16) this.localPlayerState.x = this.canvas.width - 16;
+            }
             
-            if (this.debugMode && (movement.left || movement.right)) {
-                console.log('Отправка движения:', movement);
+            // Отправляем движение на сервер
+            if (movement.left || movement.right) {
+                this.socket.emit('move', movement);
+                if (this.debugMode) {
+                    console.log('Отправка движения:', movement);
+                }
             }
         }
         
+        this.render();
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
@@ -482,7 +509,12 @@ class Game {
         
         // Отрисовка всех игроков
         this.players.forEach((player, id) => {
-            this.drawHobbit(player, id);
+            // Если это текущий игрок, используем локальное состояние
+            if (id === this.currentPlayer && this.localPlayerState) {
+                this.drawHobbit(this.localPlayerState, id);
+            } else {
+                this.drawHobbit(player, id);
+            }
         });
     }
 }
